@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Edit, Trash2, Eye, Save, X } from "lucide-react";
+import { Plus, Edit, Trash2, Eye, Save, X, Mail, MessageSquare } from "lucide-react";
 import Header from "@/components/Header";
 import { useToast } from "@/hooks/use-toast";
 import { PasswordModal } from "@/components/PasswordModal";
@@ -21,9 +21,13 @@ import {
   getDesigns,
   updateDesign,
   deleteDesign,
+  getContactMessages,
+  updateContactMessage,
+  deleteContactMessage,
   Product,
   Comment,
-  Design
+  Design,
+  ContactMessage
 } from "@/utils/dataManager";
 
 const Admin = () => {
@@ -31,6 +35,7 @@ const Admin = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [comments, setComments] = useState<Comment[]>([]);
   const [designs, setDesigns] = useState<Design[]>([]);
+  const [contactMessages, setContactMessages] = useState<ContactMessage[]>([]);
   const [editingProduct, setEditingProduct] = useState<any>(null);
   const [newProduct, setNewProduct] = useState({
     name: "",
@@ -55,6 +60,7 @@ const Admin = () => {
     setProducts(getProducts());
     setComments(getComments());
     setDesigns(getDesigns());
+    setContactMessages(getContactMessages());
   };
 
   const handleAddProduct = () => {
@@ -252,6 +258,40 @@ const Admin = () => {
     }
   };
 
+  const handleMarkAsRead = (id: number) => {
+    try {
+      updateContactMessage(id, { status: 'read' });
+      loadData();
+      toast({
+        title: "Başarılı",
+        description: "Mesaj okundu olarak işaretlendi."
+      });
+    } catch (error) {
+      toast({
+        title: "Hata",
+        description: "Mesaj güncellenirken bir hata oluştu.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleDeleteContactMessage = (id: number) => {
+    try {
+      deleteContactMessage(id);
+      loadData();
+      toast({
+        title: "Başarılı",
+        description: "Mesaj silindi."
+      });
+    } catch (error) {
+      toast({
+        title: "Hata",
+        description: "Mesaj silinirken bir hata oluştu.",
+        variant: "destructive"
+      });
+    }
+  };
+
   if (!authenticated) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-stone-100">
@@ -264,6 +304,8 @@ const Admin = () => {
     );
   }
 
+  const unreadMessages = contactMessages.filter(m => m.status === 'unread').length;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-stone-100">
       <Header />
@@ -272,15 +314,23 @@ const Admin = () => {
         <div className="mb-8 flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold text-stone-900 mb-2">Admin Paneli</h1>
-            <p className="text-stone-600">Ürünlerinizi ve yorumları yönetin</p>
+            <p className="text-stone-600">Ürünlerinizi ve mesajları yönetin</p>
           </div>
         </div>
 
         <Tabs defaultValue="products" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 lg:w-[600px]">
+          <TabsList className="grid w-full grid-cols-4 lg:w-[800px]">
             <TabsTrigger value="products">Ürün Yönetimi</TabsTrigger>
             <TabsTrigger value="comments">Yorum Yönetimi</TabsTrigger>
             <TabsTrigger value="designs">Tasarım Talepleri ({designs.length})</TabsTrigger>
+            <TabsTrigger value="messages">
+              İletişim Mesajları 
+              {unreadMessages > 0 && (
+                <Badge variant="destructive" className="ml-2 text-xs">
+                  {unreadMessages}
+                </Badge>
+              )}
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="products" className="space-y-6">
@@ -641,6 +691,81 @@ const Admin = () => {
                               <p><strong>Beden:</strong> {design.designData.tshirt.size}</p>
                               <p><strong>Öğe Sayısı:</strong> {design.designData.items.length}</p>
                             </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="messages" className="space-y-6">
+            <Card className="bg-white/90 backdrop-blur-sm">
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <MessageSquare className="h-5 w-5 mr-2" />
+                  İletişim Mesajları ({contactMessages.length})
+                  {unreadMessages > 0 && (
+                    <Badge variant="destructive" className="ml-2">
+                      {unreadMessages} okunmamış
+                    </Badge>
+                  )}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {contactMessages.length === 0 ? (
+                    <p className="text-stone-500 text-center py-8">Henüz mesaj bulunmuyor.</p>
+                  ) : (
+                    contactMessages.map((message) => (
+                      <div key={message.id} className={`border rounded-lg p-4 ${
+                        message.status === 'unread' ? 'bg-blue-50 border-blue-200' : 'bg-white'
+                      }`}>
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-2 mb-2">
+                              <h4 className="font-semibold text-stone-900">{message.name}</h4>
+                              <Badge 
+                                variant={message.status === "read" ? "default" : "secondary"}
+                                className="text-xs"
+                              >
+                                {message.status === "read" ? "Okundu" : "Okunmamış"}
+                              </Badge>
+                              <span className="text-sm text-stone-500">
+                                {new Date(message.date).toLocaleString()}
+                              </span>
+                            </div>
+                            <div className="mb-2">
+                              <p className="text-sm text-stone-600">
+                                <Mail className="h-4 w-4 inline mr-1" />
+                                {message.email}
+                              </p>
+                              <p className="font-medium text-stone-800 mt-1">
+                                Konu: {message.subject}
+                              </p>
+                            </div>
+                            <p className="text-stone-600">{message.message}</p>
+                          </div>
+                          <div className="flex space-x-2 ml-4">
+                            {message.status === "unread" && (
+                              <Button 
+                                onClick={() => handleMarkAsRead(message.id)} 
+                                variant="outline" 
+                                size="sm"
+                                className="text-blue-600 border-blue-600 hover:bg-blue-50"
+                              >
+                                Okundu İşaretle
+                              </Button>
+                            )}
+                            <Button 
+                              onClick={() => handleDeleteContactMessage(message.id)} 
+                              variant="destructive" 
+                              size="sm"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </div>
                         </div>
                       </div>

@@ -1,4 +1,3 @@
-
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Card, CardContent } from "@/components/ui/card";
@@ -9,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Mail, Phone, MapPin, Instagram, Clock, Send } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { addContactMessage } from "@/utils/dataManager";
 
 const Contact = () => {
   const [formData, setFormData] = useState({
@@ -48,12 +48,38 @@ const Contact = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Form gönderme simülasyonu
-    toast({
-      title: "Mesajınız Gönderildi",
-      description: "En kısa sürede size dönüş yapacağız."
-    });
-    setFormData({ name: "", email: "", subject: "", message: "" });
+    
+    if (!formData.name || !formData.email || !formData.subject || !formData.message) {
+      toast({
+        title: "Hata",
+        description: "Lütfen tüm alanları doldurun.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      // Save message to localStorage
+      addContactMessage({
+        name: formData.name,
+        email: formData.email,
+        subject: formData.subject,
+        message: formData.message
+      });
+
+      toast({
+        title: "Mesajınız Gönderildi",
+        description: "En kısa sürede size dönüş yapacağız."
+      });
+      
+      setFormData({ name: "", email: "", subject: "", message: "" });
+    } catch (error) {
+      toast({
+        title: "Hata",
+        description: "Mesaj gönderilirken bir hata oluştu.",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {

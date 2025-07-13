@@ -3,6 +3,8 @@ import { Rnd } from "react-rnd";
 import html2canvas from "html2canvas";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { addDesign } from "@/utils/dataManager";
+import { useToast } from "@/hooks/use-toast";
 
 // Constants
 const tshirtSides = [
@@ -51,6 +53,7 @@ export default function App() {
   const [jsonFile, setJsonFile] = useState<File | null>(null);
   const [jsonError, setJsonError] = useState<string | null>(null);
   const [jsonContent, setJsonContent] = useState<LoadedDesign | null>(null);
+  const { toast } = useToast();
 
   const [formData, setFormData] = useState({
     name: "",
@@ -111,11 +114,19 @@ export default function App() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!jsonContent) {
-      alert("Lütfen geçerli bir JSON dosyası yükleyin.");
+      toast({
+        title: "Hata",
+        description: "Lütfen geçerli bir JSON dosyası yükleyin.",
+        variant: "destructive"
+      });
       return;
     }
     if (!formData.name || !formData.surname || !formData.address) {
-      alert("Lütfen tüm zorunlu alanları doldurun.");
+      toast({
+        title: "Hata", 
+        description: "Lütfen tüm zorunlu alanları doldurun.",
+        variant: "destructive"
+      });
       return;
     }
 
@@ -133,7 +144,7 @@ export default function App() {
       const previewImage = canvas.toDataURL("image/png");
       setPreviewMode(false);
 
-      // Prepare data for API
+      // Save design to localStorage
       const designData = {
         userInfo: formData,
         designData: {
@@ -144,33 +155,28 @@ export default function App() {
           items: designItems,
           previewImage,
         },
+        createdAt: new Date().toISOString(),
+        status: 'pending' as const
       };
 
-      // Send to API
-      const response = await fetch('/api/saveDesign', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(designData),
-      });
-
-      if (!response.ok) {
-        throw new Error('Tasarım kaydedilemedi');
-      }
-
-      const result = await response.json();
-      console.log('Design saved:', result);
+      addDesign(designData);
 
       // Show preview
       setLoadedDesign(jsonContent);
       setUserInfo(formData);
       setMode("preview");
 
-      alert("Tasarım başarıyla gönderildi ve admin onayına sunuldu!");
+      toast({
+        title: "Başarılı",
+        description: "Tasarım başarıyla gönderildi ve admin onayına sunuldu!"
+      });
     } catch (error) {
       console.error('Error saving design:', error);
-      alert("Tasarım gönderilirken bir hata oluştu: " + (error as Error).message);
+      toast({
+        title: "Hata",
+        description: "Tasarım gönderilirken bir hata oluştu: " + (error as Error).message,
+        variant: "destructive"
+      });
     } finally {
       setPreviewMode(false);
       setIsSubmitting(false);
@@ -299,10 +305,17 @@ export default function App() {
       linkElement.setAttribute("download", exportFileDefaultName);
       linkElement.click();
 
-      alert("Tasarım başarıyla kaydedildi ve indirildi.");
+      toast({
+        title: "Başarılı",
+        description: "Tasarım başarıyla kaydedildi ve indirildi."
+      });
     } catch (err) {
       console.error("Kaydetme hatası:", err);
-      alert("Bir hata oluştu: " + (err as Error).message);
+      toast({
+        title: "Hata",
+        description: "Bir hata oluştu: " + (err as Error).message,
+        variant: "destructive"
+      });
     } finally {
       setPreviewMode(false);
     }

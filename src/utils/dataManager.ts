@@ -35,11 +35,21 @@ export interface Design {
       color: string;
       size: string;
     };
-    items: any[]; // Daha önce DesignItem varsa onu tanımla
+    items: any[];
     previewImage: string;
   };
   createdAt: string;
   status: 'pending' | 'approved' | 'rejected';
+}
+
+export interface ContactMessage {
+  id: number;
+  name: string;
+  email: string;
+  subject: string;
+  message: string;
+  date: string;
+  status: 'unread' | 'read';
 }
 
 // --- Varsayılan örnek veriler ---
@@ -192,4 +202,47 @@ export const deleteDesign = (id: number): void => {
   const designs = getDesigns();
   const filtered = designs.filter(d => d.id !== id);
   saveDesigns(filtered);
+};
+
+// --- İletişim Mesajları Fonksiyonları ---
+export const getContactMessages = (): ContactMessage[] => {
+  const stored = localStorage.getItem('labrion_contact_messages');
+  if (!stored) {
+    localStorage.setItem('labrion_contact_messages', JSON.stringify([]));
+    return [];
+  }
+  return JSON.parse(stored);
+};
+
+export const saveContactMessages = (messages: ContactMessage[]): void => {
+  localStorage.setItem('labrion_contact_messages', JSON.stringify(messages));
+};
+
+export const addContactMessage = (message: Omit<ContactMessage, 'id' | 'date' | 'status'>): ContactMessage => {
+  const messages = getContactMessages();
+  const newId = Math.max(...messages.map(m => m.id), 0) + 1;
+  const newMessage: ContactMessage = {
+    ...message,
+    id: newId,
+    date: new Date().toISOString(),
+    status: 'unread'
+  };
+  messages.push(newMessage);
+  saveContactMessages(messages);
+  return newMessage;
+};
+
+export const updateContactMessage = (id: number, updates: Partial<ContactMessage>): void => {
+  const messages = getContactMessages();
+  const index = messages.findIndex(m => m.id === id);
+  if (index !== -1) {
+    messages[index] = { ...messages[index], ...updates };
+    saveContactMessages(messages);
+  }
+};
+
+export const deleteContactMessage = (id: number): void => {
+  const messages = getContactMessages();
+  const filtered = messages.filter(m => m.id !== id);
+  saveContactMessages(filtered);
 };
