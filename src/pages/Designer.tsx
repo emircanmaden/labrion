@@ -132,36 +132,25 @@ export default function App() {
 
     setIsSubmitting(true);
     try {
-      // Create preview image
-      setPreviewMode(true);
-      await new Promise((res) => setTimeout(res, 100));
-      
-      const canvas = await html2canvas(tshirtRef.current!, {
-        scrollX: -window.scrollX,
-        scrollY: -window.scrollY,
-        useCORS: true,
-      });
-      const previewImage = canvas.toDataURL("image/png");
-      setPreviewMode(false);
-
-      // Save design to localStorage
+      // JSON'dan tasarım verilerini al
       const designData = {
         userInfo: formData,
         designData: {
           tshirt: {
-            color: selectedColor,
-            size: selectedSize,
+            color: jsonContent.tshirt.color?.code || jsonContent.tshirt.color || "#ffffff",
+            size: jsonContent.tshirt.size || "M",
           },
-          items: designItems,
-          previewImage,
+          items: jsonContent.designs || [],
+          previewImage: jsonContent.tshirtImage || "",
         },
         createdAt: new Date().toISOString(),
         status: 'pending' as const
       };
 
+      // Admin panele kaydet
       addDesign(designData);
 
-      // Show preview
+      // Önizleme göster
       setLoadedDesign(jsonContent);
       setUserInfo(formData);
       setMode("preview");
@@ -178,7 +167,6 @@ export default function App() {
         variant: "destructive"
       });
     } finally {
-      setPreviewMode(false);
       setIsSubmitting(false);
     }
   };
@@ -244,7 +232,14 @@ export default function App() {
   };
 
   const saveDesign = async () => {
-    if (!tshirtRef.current) return;
+    if (!tshirtRef.current) {
+      toast({
+        title: "Hata",
+        description: "Tasarım alanı bulunamadı.",
+        variant: "destructive"
+      });
+      return;
+    }
 
     try {
       setPreviewMode(true);
@@ -254,6 +249,8 @@ export default function App() {
         scrollX: -window.scrollX,
         scrollY: -window.scrollY,
         useCORS: true,
+        allowTaint: true,
+        backgroundColor: null,
       });
 
       const tshirtImage = canvas.toDataURL("image/png");
@@ -274,20 +271,15 @@ export default function App() {
           },
         },
         designs: designItems.map((item) => ({
+          id: item.id,
           type: item.type,
-          content: item.type === "text" ? item.content : "image",
+          content: item.content,
           color: item.color,
-          position: {
-            x: item.x,
-            y: item.y,
-            width: item.width,
-            height: item.height,
-          },
-          side: {
-            id: item.side,
-            name:
-              tshirtSides.find((s) => s.id === item.side)?.label || "Bilinmeyen",
-          },
+          x: item.x,
+          y: item.y,
+          width: item.width,
+          height: item.height,
+          side: item.side,
         })),
         tshirtImage: tshirtImage,
         timestamp: new Date().toISOString(),
@@ -313,7 +305,7 @@ export default function App() {
       console.error("Kaydetme hatası:", err);
       toast({
         title: "Hata",
-        description: "Bir hata oluştu: " + (err as Error).message,
+        description: "Tasarım kaydedilirken bir hata oluştu: " + (err as Error).message,
         variant: "destructive"
       });
     } finally {

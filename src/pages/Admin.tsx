@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Edit, Trash2, Eye, Save, X, Mail, MessageSquare } from "lucide-react";
+import { Plus, Edit, Trash2, Eye, Save, X, Mail, MessageSquare, ChevronDown, ChevronUp } from "lucide-react";
 import Header from "@/components/Header";
 import { useToast } from "@/hooks/use-toast";
 import { PasswordModal } from "@/components/PasswordModal";
@@ -37,6 +37,7 @@ const Admin = () => {
   const [designs, setDesigns] = useState<Design[]>([]);
   const [contactMessages, setContactMessages] = useState<ContactMessage[]>([]);
   const [editingProduct, setEditingProduct] = useState<any>(null);
+  const [expandedMessages, setExpandedMessages] = useState<Set<number>>(new Set());
   const [newProduct, setNewProduct] = useState({
     name: "",
     price: "",
@@ -61,6 +62,21 @@ const Admin = () => {
     setComments(getComments());
     setDesigns(getDesigns());
     setContactMessages(getContactMessages());
+  };
+
+  const toggleMessageExpansion = (messageId: number) => {
+    const newExpanded = new Set(expandedMessages);
+    if (newExpanded.has(messageId)) {
+      newExpanded.delete(messageId);
+    } else {
+      newExpanded.add(messageId);
+    }
+    setExpandedMessages(newExpanded);
+  };
+
+  const truncateText = (text: string, maxLength: number = 150) => {
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength) + "...";
   };
 
   const handleAddProduct = () => {
@@ -304,7 +320,10 @@ const Admin = () => {
     );
   }
 
+  // Badge hesaplamaları
   const unreadMessages = contactMessages.filter(m => m.status === 'unread').length;
+  const pendingComments = comments.filter(c => c.status === 'pending').length;
+  const pendingDesigns = designs.filter(d => d.status === 'pending').length;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-stone-100">
@@ -321,8 +340,22 @@ const Admin = () => {
         <Tabs defaultValue="products" className="space-y-6">
           <TabsList className="grid w-full grid-cols-4 lg:w-[800px]">
             <TabsTrigger value="products">Ürün Yönetimi</TabsTrigger>
-            <TabsTrigger value="comments">Yorum Yönetimi</TabsTrigger>
-            <TabsTrigger value="designs">Tasarım Talepleri ({designs.length})</TabsTrigger>
+            <TabsTrigger value="comments">
+              Yorum Yönetimi
+              {pendingComments > 0 && (
+                <Badge variant="destructive" className="ml-2 text-xs">
+                  {pendingComments}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="designs">
+              Tasarım Talepleri
+              {pendingDesigns > 0 && (
+                <Badge variant="destructive" className="ml-2 text-xs">
+                  {pendingDesigns}
+                </Badge>
+              )}
+            </TabsTrigger>
             <TabsTrigger value="messages">
               İletişim Mesajları 
               {unreadMessages > 0 && (
@@ -553,6 +586,11 @@ const Admin = () => {
                 <CardTitle className="flex items-center">
                   <Eye className="h-5 w-5 mr-2" />
                   Yorum Yönetimi ({comments.length})
+                  {pendingComments > 0 && (
+                    <Badge variant="destructive" className="ml-2">
+                      {pendingComments} bekliyor
+                    </Badge>
+                  )}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -613,7 +651,14 @@ const Admin = () => {
           <TabsContent value="designs" className="space-y-6">
             <Card className="bg-white/90 backdrop-blur-sm">
               <CardHeader>
-                <CardTitle>Tasarım Talepleri ({designs.length})</CardTitle>
+                <CardTitle>
+                  Tasarım Talepleri ({designs.length})
+                  {pendingDesigns > 0 && (
+                    <Badge variant="destructive" className="ml-2">
+                      {pendingDesigns} bekliyor
+                    </Badge>
+                  )}
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -746,7 +791,37 @@ const Admin = () => {
                                 Konu: {message.subject}
                               </p>
                             </div>
-                            <p className="text-stone-600">{message.message}</p>
+                            <div className="text-stone-600">
+                              {expandedMessages.has(message.id) ? (
+                                <div>
+                                  <p className="whitespace-pre-wrap">{message.message}</p>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => toggleMessageExpansion(message.id)}
+                                    className="mt-2 text-blue-600 hover:text-blue-800"
+                                  >
+                                    <ChevronUp className="h-4 w-4 mr-1" />
+                                    Daha az göster
+                                  </Button>
+                                </div>
+                              ) : (
+                                <div>
+                                  <p className="whitespace-pre-wrap">{truncateText(message.message)}</p>
+                                  {message.message.length > 150 && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => toggleMessageExpansion(message.id)}
+                                      className="mt-2 text-blue-600 hover:text-blue-800"
+                                    >
+                                      <ChevronDown className="h-4 w-4 mr-1" />
+                                      Daha fazla göster
+                                    </Button>
+                                  )}
+                                </div>
+                              )}
+                            </div>
                           </div>
                           <div className="flex space-x-2 ml-4">
                             {message.status === "unread" && (
